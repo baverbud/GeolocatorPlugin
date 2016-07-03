@@ -24,6 +24,9 @@ using System.Linq;
 using Android.Content;
 using Android.Content.PM;
 using Plugin.Permissions;
+using Android.Gms.Common.Apis;
+using Android.Gms.Location;
+using Android.Gms.Common;
 
 namespace Plugin.Geolocator
 {
@@ -38,6 +41,8 @@ namespace Plugin.Geolocator
         public GeolocatorImplementation()
         {
             DesiredAccuracy = 100;
+
+            gpsManager = new GoogleConnectionHandler();
             manager = (LocationManager)Application.Context.GetSystemService(Context.LocationService);
             providers = manager.GetProviders(enabledOnly: false).Where(s => s != LocationManager.PassiveProvider).ToArray();
         }
@@ -75,7 +80,7 @@ namespace Plugin.Geolocator
         {
             get { return providers.Any(manager.IsProviderEnabled); }
         }
-
+        
 
         /// <inheritdoc/>
         public async Task<Position> GetPositionAsync(int timeoutMilliseconds = Timeout.Infinite, CancellationToken? cancelToken = null, bool includeHeading = false)
@@ -103,91 +108,10 @@ namespace Plugin.Geolocator
 
             if (timeoutMilliseconds <= 0 && timeoutMilliseconds != Timeout.Infinite)
                 throw new ArgumentOutOfRangeException("timeoutMilliseconds", "timeout must be greater than or equal to 0");
+            
 
-            if (!cancelToken.HasValue)
-                cancelToken = CancellationToken.None;
-
-
-            var tcs = new TaskCompletionSource<Position>();
-
-            if (!IsListening)
-            {
-                GeolocationSingleListener singleListener = null;
-                singleListener = new GeolocationSingleListener((float)DesiredAccuracy, timeoutMilliseconds, providers.Where(manager.IsProviderEnabled),
-                    finishedCallback: () =>
-                {
-                    for (int i = 0; i < providers.Length; ++i)
-                        manager.RemoveUpdates(singleListener);
-                });
-
-                if (cancelToken != CancellationToken.None)
-                {
-                    cancelToken.Value.Register(() =>
-                    {
-                        singleListener.Cancel();
-
-                        for (int i = 0; i < providers.Length; ++i)
-                            manager.RemoveUpdates(singleListener);
-                    }, true);
-                }
-
-                try
-                {
-                    Looper looper = Looper.MyLooper() ?? Looper.MainLooper;
-
-                    int enabled = 0;
-                    for (int i = 0; i < providers.Length; ++i)
-                    {
-                        if (manager.IsProviderEnabled(providers[i]))
-                            enabled++;
-
-                        manager.RequestLocationUpdates(providers[i], 0, 0, singleListener, looper);
-                    }
-
-                    if (enabled == 0)
-                    {
-                        for (int i = 0; i < providers.Length; ++i)
-                            manager.RemoveUpdates(singleListener);
-
-                        tcs.SetException(new GeolocationException(GeolocationError.PositionUnavailable));
-                        return await tcs.Task.ConfigureAwait(false);
-                    }
-                }
-                catch (Java.Lang.SecurityException ex)
-                {
-                    tcs.SetException(new GeolocationException(GeolocationError.Unauthorized, ex));
-                    return await tcs.Task.ConfigureAwait(false);
-                }
-
-                return await singleListener.Task.ConfigureAwait(false);
-            }
-
-            // If we're already listening, just use the current listener
-            lock (positionSync)
-            {
-                if (lastPosition == null)
-                {
-                    if (cancelToken != CancellationToken.None)
-                    {
-                        cancelToken.Value.Register(() => tcs.TrySetCanceled());
-                    }
-
-                    EventHandler<PositionEventArgs> gotPosition = null;
-                    gotPosition = (s, e) =>
-                    {
-                        tcs.TrySetResult(e.Position);
-                        PositionChanged -= gotPosition;
-                    };
-
-                    PositionChanged += gotPosition;
-                }
-                else
-                {
-                    tcs.SetResult(lastPosition);
-                }
-            }
-
-            return await tcs.Task.ConfigureAwait(false);
+            // Not an async call - google play services responds with last location, does not wait for next one.
+            return gpsManager.GetPosition();
         }
 
         /// <inheritdoc/>
@@ -220,34 +144,24 @@ namespace Plugin.Geolocator
             if (IsListening)
                 throw new InvalidOperationException("This Geolocator is already listening");
 
-            listener = new GeolocationContinuousListener(manager, TimeSpan.FromMilliseconds(minTime), providers);
-            listener.PositionChanged += OnListenerPositionChanged;
-            listener.PositionError += OnListenerPositionError;
-
-            Looper looper = Looper.MyLooper() ?? Looper.MainLooper;
-            for (int i = 0; i < providers.Length; ++i)
-                manager.RequestLocationUpdates(providers[i], minTime, (float)minDistance, listener, looper);
-
+            gpsManager.OnStart();
+            gpsManager.PositionChanged += OnListenerPositionChanged;
+            
             return true;
         }
         /// <inheritdoc/>
         public Task<bool> StopListeningAsync()
         {
-            if (listener == null)
-                return Task.FromResult(true);
-
-            listener.PositionChanged -= OnListenerPositionChanged;
-            listener.PositionError -= OnListenerPositionError;
-
-            for (int i = 0; i < providers.Length; ++i)
-                manager.RemoveUpdates(listener);
-
-            listener = null;
+            gpsManager.OnStop();
+            gpsManager.PositionChanged -= OnListenerPositionChanged;
             return Task.FromResult(true);
         }
 
+
+
         private string[] providers;
         private readonly LocationManager manager;
+        private readonly GoogleConnectionHandler gpsManager; // Google Play Services location manager
         private string headingProvider;
 
         private GeolocationContinuousListener listener;
