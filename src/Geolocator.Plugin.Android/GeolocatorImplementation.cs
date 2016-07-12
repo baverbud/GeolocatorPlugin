@@ -53,7 +53,7 @@ namespace Plugin.Geolocator
         /// <inheritdoc/>
         public bool IsListening
         {
-            get { return listener != null; }
+            get { return gpsManager.IsListening; }
         }
         /// <inheritdoc/>
         public double DesiredAccuracy
@@ -144,8 +144,8 @@ namespace Plugin.Geolocator
             if (IsListening)
                 throw new InvalidOperationException("This Geolocator is already listening");
 
-            gpsManager.OnStart();
             gpsManager.PositionChanged += OnListenerPositionChanged;
+            gpsManager.OnStart();
             
             return true;
         }
@@ -163,9 +163,7 @@ namespace Plugin.Geolocator
         private readonly LocationManager manager;
         private readonly GoogleConnectionHandler gpsManager; // Google Play Services location manager
         private string headingProvider;
-
-        private GeolocationContinuousListener listener;
-
+        
         private readonly object positionSync = new object();
         private Position lastPosition;
         /// <inheritdoc/>

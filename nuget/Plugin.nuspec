@@ -107,14 +107,6 @@
      <file src="src\Geolocator.Plugin.Abstractions\bin\Release\Plugin.Geolocator.Abstractions.dll" target="lib\Xamarin.iOS10\Plugin.Geolocator.Abstractions.dll" />
      <file src="src\Geolocator.Plugin.Abstractions\bin\Release\Plugin.Geolocator.Abstractions.xml" target="lib\Xamarin.iOS10\Plugin.Geolocator.Abstractions.xml" />
     
-       <!--UWP-->
-       <file src="src\Geolocator.Plugin.UWP\bin\Release\Plugin.Geolocator.dll" target="lib\UAP10\Plugin.Geolocator.dll" />
-       <file src="src\Geolocator.Plugin.UWP\bin\Release\Plugin.Geolocator.xml" target="lib\UAP10\Plugin.Geolocator.xml" />
-       <file src="src\Geolocator.Plugin.UWP\bin\Release\Plugin.Geolocator.pdb" target="lib\UAP10\Plugin.Geolocator.pdb" />
-       <file src="src\Geolocator.Plugin.Abstractions\bin\Release\Plugin.Geolocator.Abstractions.dll" target="lib\UAP10\Plugin.Geolocator.Abstractions.dll" />
-       <file src="src\Geolocator.Plugin.Abstractions\bin\Release\Plugin.Geolocator.Abstractions.xml" target="lib\UAP10\Plugin.Geolocator.Abstractions.xml" />
-       <file src="src\Geolocator.Plugin.Abstractions\bin\Release\Plugin.Geolocator.Abstractions.pdb" target="lib\UAP10\Plugin.Geolocator.Abstractions.pdb" />
-       
  <!--net45-->
        <file src="src\Geolocator.Plugin.Net45\bin\Release\Plugin.Geolocator.dll" target="lib\net45\Plugin.Geolocator.dll" />
        <file src="src\Geolocator.Plugin.Net45\bin\Release\Plugin.Geolocator.xml" target="lib\net45\Plugin.Geolocator.xml" />

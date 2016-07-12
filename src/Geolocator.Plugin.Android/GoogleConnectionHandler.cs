@@ -21,6 +21,8 @@ namespace Plugin.Geolocator
     {
         public int REQUEST_CHECK_SETTINGS = 11000;
 
+        public bool IsListening { get; private set; }
+
         public GoogleApiClient GoogleApiClient
         {
             get;
@@ -35,8 +37,7 @@ namespace Plugin.Geolocator
 
         public GoogleConnectionHandler()
         {
-
-
+            IsListening = false;
             // Create an instance of GoogleAPIClient.
             GoogleApiClient = new GoogleApiClient.Builder(Application.Context)
                 .AddConnectionCallbacks(this)
@@ -69,7 +70,16 @@ namespace Plugin.Geolocator
 
         public void OnStart()
         {
-            GoogleApiClient.Connect();
+            if (GoogleApiClient.IsConnected)
+            {
+                LocationServices.FusedLocationApi.RequestLocationUpdates(
+                        GoogleApiClient, LocationRequest, this);
+                IsListening = true;
+            }
+            else
+            {
+                GoogleApiClient.Connect();
+            }
         }
 
         public void OnStop()
@@ -80,10 +90,9 @@ namespace Plugin.Geolocator
         /// <inheritdoc/>
         public void OnConnected(Bundle connectionHint)
         {
-
             LocationServices.FusedLocationApi.RequestLocationUpdates(
                     GoogleApiClient, LocationRequest, this);
-
+            IsListening = true;
         }
 
         /// <inheritdoc/>
